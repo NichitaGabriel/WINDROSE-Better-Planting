@@ -33,6 +33,12 @@ function Selection.init(config, bridge, log)
     Selection._currentSelection = nil
 end
 
+function Selection._safeLog(method, message)
+    if Selection._log and Selection._log[method] then
+        Selection._log[method](message)
+    end
+end
+
 -- ---------------------------------------------------------------------------
 -- Public API
 -- ---------------------------------------------------------------------------
@@ -94,9 +100,7 @@ function Selection._notify(newSelection)
     for _, cb in ipairs(Selection._changeCallbacks) do
         local ok, err = pcall(cb, newSelection)
         if not ok then
-            if Selection._log and Selection._log.warn then
-                Selection._log.warn("Selection callback error: " .. tostring(err))
-            end
+            Selection._safeLog("warn", "Selection callback error: " .. tostring(err))
         end
     end
 end

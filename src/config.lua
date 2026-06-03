@@ -170,6 +170,8 @@ function Config.getInitialMode(config)
 end
 
 function Config.modeAllows(config, activeMode, feature)
+    -- When config.mode is "both", activeMode represents the currently selected
+    -- preview mode within this prototype scaffold ("snap" or "grid").
     if feature == "snap" then
         return config.snap.enabled and (config.mode == "snap" or activeMode == "snap")
     end

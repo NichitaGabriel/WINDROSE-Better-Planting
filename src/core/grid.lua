@@ -9,6 +9,7 @@
 local Placement = require("core.placement")
 
 local Grid = {}
+local DEFAULT_ANCHOR = {x = 0, y = 0, z = 0}
 
 Grid._config = nil
 
@@ -38,7 +39,7 @@ function Grid.generate(preset)
     local cols = preset.cols or Grid._config.grid.cols
     local spacing = preset.spacing or Grid._config.grid.spacing
     local rotation = preset.rotation or 0
-    local anchor = preset.anchor or {x = 0, y = 0, z = 0}
+    local anchor = preset.anchor or DEFAULT_ANCHOR
 
     local cells = Placement.getAllCellPositions(
         anchor,

@@ -10,6 +10,7 @@
 --       the confirmed modding runtime. Replace TODO blocks once confirmed.
 
 local Input = {}
+local DEFAULT_ROTATION_STEP = 45
 
 Input._config = nil
 Input._bridge = nil
@@ -120,8 +121,10 @@ end
 function Input._fireModeToggle()
     for _, cb in ipairs(Input._modeCallbacks) do
         local ok, err = pcall(cb)
-        if not ok and Input._log and Input._log.warn then
-            Input._log.warn("ModeToggle callback error: " .. tostring(err))
+        if not ok then
+            if Input._log and Input._log.warn then
+                Input._log.warn("ModeToggle callback error: " .. tostring(err))
+            end
         end
     end
 end
@@ -129,8 +132,10 @@ end
 function Input._fireSpacingAdjust(delta)
     for _, cb in ipairs(Input._spacingCallbacks) do
         local ok, err = pcall(cb, delta)
-        if not ok and Input._log and Input._log.warn then
-            Input._log.warn("Spacing callback error: " .. tostring(err))
+        if not ok then
+            if Input._log and Input._log.warn then
+                Input._log.warn("Spacing callback error: " .. tostring(err))
+            end
         end
     end
 end
@@ -138,8 +143,10 @@ end
 function Input._fireRotate(delta)
     for _, cb in ipairs(Input._rotateCallbacks) do
         local ok, err = pcall(cb, delta)
-        if not ok and Input._log and Input._log.warn then
-            Input._log.warn("Rotate callback error: " .. tostring(err))
+        if not ok then
+            if Input._log and Input._log.warn then
+                Input._log.warn("Rotate callback error: " .. tostring(err))
+            end
         end
     end
 end
@@ -158,8 +165,10 @@ end
 function Input._fireCancel()
     for _, cb in ipairs(Input._cancelCallbacks) do
         local ok, err = pcall(cb)
-        if not ok and Input._log and Input._log.warn then
-            Input._log.warn("Cancel callback error: " .. tostring(err))
+        if not ok then
+            if Input._log and Input._log.warn then
+                Input._log.warn("Cancel callback error: " .. tostring(err))
+            end
         end
     end
 end
@@ -186,11 +195,12 @@ function Input.simulateAction(action)
     if action == "decrease_spacing" then
         return Input._fireSpacingAdjust(-0.5)
     end
+    local rotationStep = (Input._config and Input._config.grid and Input._config.grid.rotation_step_deg) or DEFAULT_ROTATION_STEP
     if action == "rotate_cw" then
-        return Input._fireRotate(Input._config.grid.rotation_step_deg)
+        return Input._fireRotate(rotationStep)
     end
     if action == "rotate_ccw" then
-        return Input._fireRotate(-Input._config.grid.rotation_step_deg)
+        return Input._fireRotate(-rotationStep)
     end
     if action == "confirm_placement" then
         return Input._fireConfirm()

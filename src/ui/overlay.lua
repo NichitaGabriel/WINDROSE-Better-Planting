@@ -32,6 +32,12 @@ function Overlay.init(config, log)
     Overlay._visible = false
 end
 
+function Overlay._safeLog(method, message)
+    if Overlay._log and Overlay._log[method] then
+        Overlay._log[method](message)
+    end
+end
+
 -- ---------------------------------------------------------------------------
 -- HUD show / hide / update
 -- ---------------------------------------------------------------------------
@@ -69,9 +75,7 @@ end
 
 --- Open the settings panel (if available).
 function Overlay.showSettings()
-    if Overlay._log and Overlay._log.info then
-        Overlay._log.info("Settings panel requested. TODO: bind to verified UI runtime.")
-    end
+    Overlay._safeLog("info", "Settings panel requested. TODO: bind to verified UI runtime.")
 end
 
 --- Close the settings panel.

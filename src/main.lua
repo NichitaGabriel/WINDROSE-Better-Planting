@@ -26,7 +26,7 @@ BetterPlanting._placementMode = "snap"
 
 function BetterPlanting.init()
    BetterPlanting._config = Config.load("config/default-config.json")
-   Log.init(BetterPlanting._config.debug)
+   Log.init(BetterPlanting._config.debug, "BetterPlanting")
    RuntimeBridge.init(BetterPlanting._config, Log)
    BetterPlanting._placementMode = Config.getInitialMode(BetterPlanting._config)
 
@@ -158,7 +158,7 @@ function BetterPlanting._refreshPrototypeState(anchorPos)
     local snapPoint = Placement.snapToGrid(anchorPos, BetterPlanting._currentPreset.spacing)
     BetterPlanting._currentSnap = Validation.getCandidate(snapPoint, BetterPlanting._currentSelection)
 
-    if Config.modeAllows(BetterPlanting._config, BetterPlanting._placementMode, "snap") then
+    if BetterPlanting._currentSnap and Config.modeAllows(BetterPlanting._config, BetterPlanting._placementMode, "snap") then
         Preview.showSnapPoint(BetterPlanting._currentSnap.worldPos)
     else
         Preview.hideSnapPoint()
@@ -217,6 +217,9 @@ function BetterPlanting.getPrototypeState()
     }
 end
 
+-- Intentional for the prototype phase: loading the module immediately boots
+-- the stubbed runtime flow so it can be exercised by a UE4SS-style loader or
+-- local mock validation without extra wiring.
 BetterPlanting.init()
 
 return BetterPlanting

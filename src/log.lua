@@ -7,6 +7,7 @@ local Log = {}
 
 Log._enabled = true
 Log._level = "info"
+Log._prefix = "BetterPlanting"
 Log._levels = {
     debug = 1,
     info = 2,
@@ -14,10 +15,11 @@ Log._levels = {
     error = 4,
 }
 
-function Log.init(config)
+function Log.init(config, prefix)
     config = config or {}
     Log._enabled = config.enabled ~= false
     Log._level = config.log_level or "info"
+    Log._prefix = prefix or Log._prefix
 end
 
 function Log._shouldLog(level)
@@ -33,7 +35,7 @@ function Log._print(level, message)
         return
     end
 
-    print(string.format("[BetterPlanting][%s] %s", string.upper(level), tostring(message)))
+    print(string.format("[%s][%s] %s", Log._prefix, string.upper(level), tostring(message)))
 end
 
 function Log.debug(message)
