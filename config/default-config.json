@@ -1,0 +1,89 @@
+{
+  "_comment": "WINDROSE Better Planting — default configuration. All values are placeholders until engine integration is confirmed.",
+
+  "enabled": true,
+  "mode": "both",
+
+  "snap": {
+    "_comment": "Option A — snap-assisted single placement settings.",
+    "enabled": true,
+    "spacing": 2.0,
+    "indicator_color": "#00FF88",
+    "indicator_opacity": 0.75,
+    "show_indicator": true
+  },
+
+  "grid": {
+    "_comment": "Option B — ghost grid preview settings.",
+    "enabled": true,
+    "rows": 3,
+    "cols": 3,
+    "spacing": 2.0,
+    "rotation_step_deg": 45,
+    "valid_color": "#00FF44",
+    "invalid_color": "#FF3333",
+    "cell_opacity": 0.55,
+    "show_grid_lines": true,
+    "grid_line_color": "#FFFFFF",
+    "grid_line_opacity": 0.25
+  },
+
+  "presets": {
+    "_comment": "Named spacing presets. Use 'crops' for seedbed crops, 'trees' for orchard/forest planting.",
+    "crops": {
+      "spacing": 2.0,
+      "rows": 4,
+      "cols": 4,
+      "rotation_step_deg": 90
+    },
+    "trees": {
+      "spacing": 3.5,
+      "rows": 3,
+      "cols": 3,
+      "rotation_step_deg": 45
+    },
+    "dense_crops": {
+      "spacing": 1.5,
+      "rows": 5,
+      "cols": 5,
+      "rotation_step_deg": 90
+    },
+    "orchard": {
+      "spacing": 4.0,
+      "rows": 2,
+      "cols": 5,
+      "rotation_step_deg": 0
+    }
+  },
+
+  "active_preset": "crops",
+
+  "hotkeys": {
+    "_comment": "Key bindings. Values are placeholder key names — actual binding format depends on runtime stack.",
+    "toggle_mod": "F8",
+    "toggle_mode": "F9",
+    "increase_rows": "NumpadPlus",
+    "decrease_rows": "NumpadMinus",
+    "increase_cols": "RightBracket",
+    "decrease_cols": "LeftBracket",
+    "increase_spacing": "Equals",
+    "decrease_spacing": "Minus",
+    "rotate_cw": "Period",
+    "rotate_ccw": "Comma",
+    "confirm_placement": "MouseButton1",
+    "cancel": "Escape",
+    "open_settings": "F10"
+  },
+
+  "preview": {
+    "_comment": "Visual settings for the overlay and HUD readout.",
+    "show_hud": true,
+    "hud_position": "top_left",
+    "hud_opacity": 0.85,
+    "hud_font_size": 14,
+    "cell_shape": "circle",
+    "cell_radius": 0.4,
+    "highlight_anchor_cell": true,
+    "anchor_color": "#FFFF00"
+  }
+}
