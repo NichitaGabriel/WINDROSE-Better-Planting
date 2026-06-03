@@ -62,15 +62,13 @@ end
 --- @param anchorPos table   {x, y, z} — new anchor (cursor) position.
 --- @return table  The updated grid object.
 function Grid.setAnchor(grid, anchorPos)
-    grid.anchor = anchorPos
-    grid.cells = Placement.getAllCellPositions(
-        anchorPos,
-        grid.rows,
-        grid.cols,
-        grid.spacing,
-        grid.rotation
-    )
-    return grid
+    return Grid.generate({
+        rows = grid.rows,
+        cols = grid.cols,
+        spacing = grid.spacing,
+        rotation = grid.rotation,
+        anchor = anchorPos,
+    })
 end
 
 --- Return a new grid with updated row and column counts, preserving the

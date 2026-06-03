@@ -8,7 +8,8 @@
     "_comment": "Research/prototype settings. These document the current goal and default runtime behavior for the skeleton code.",
     "objective": "When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.",
     "default_active_mode": "snap",
-    "allow_mock_bridge": true
+    "allow_mock_bridge": true,
+    "min_spacing": 0.5
   },
 
   "debug": {

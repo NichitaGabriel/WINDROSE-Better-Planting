@@ -46,7 +46,7 @@ function RuntimeBridge.queryPlacementValidity(worldPos, plantType)
         return RuntimeBridge._mock.validity(worldPos, plantType)
     end
 
-    return nil, "Runtime validity query not implemented"
+    return nil, "Prototype placeholder: runtime validity query is not implemented yet. Wire a verified Windrose or UE4SS placement check into src/runtime/bridge.lua."
 end
 
 function RuntimeBridge.describeCapabilities()

@@ -47,6 +47,7 @@ Config._defaults = {
         objective = "When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.",
         default_active_mode = "snap",
         allow_mock_bridge = true,
+        min_spacing = 0.5,
     },
     debug = {
         enabled = true,

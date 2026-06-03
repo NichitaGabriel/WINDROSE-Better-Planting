@@ -101,7 +101,8 @@ function BetterPlanting._onSpacingAdjust(delta)
         return
     end
 
-    local spacing = math.max(0.5, (BetterPlanting._currentPreset.spacing or 2.0) + delta)
+    local minSpacing = BetterPlanting._config.prototype.min_spacing or 0.5
+    local spacing = math.max(minSpacing, (BetterPlanting._currentPreset.spacing or 2.0) + delta)
     BetterPlanting._currentPreset.spacing = spacing
 
     if BetterPlanting._currentGrid then
