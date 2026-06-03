@@ -6,8 +6,7 @@
 -- and validity information. Delegates position math to placement.lua and
 -- validity checks to validation.lua.
 
-local Placement  = require("core.placement")
-local Validation = require("core.validation")
+local Placement = require("core.placement")
 
 local Grid = {}
 
@@ -35,24 +34,24 @@ end
 ---                      and is updated externally when the cursor moves.
 --- @return table  Grid object: {rows, cols, spacing, rotation, cells[]}
 function Grid.generate(preset)
-    local rows     = preset.rows     or Grid._config.grid.rows
-    local cols     = preset.cols     or Grid._config.grid.cols
-    local spacing  = preset.spacing  or Grid._config.grid.spacing
+    local rows = preset.rows or Grid._config.grid.rows
+    local cols = preset.cols or Grid._config.grid.cols
+    local spacing = preset.spacing or Grid._config.grid.spacing
     local rotation = preset.rotation or 0
+    local anchor = preset.anchor or {x = 0, y = 0, z = 0}
 
-    -- Cells are initially anchored at the world origin.
-    -- The caller (main.lua) should call Grid.setAnchor() before displaying.
     local cells = Placement.getAllCellPositions(
-        {x = 0, y = 0, z = 0},
+        anchor,
         rows, cols, spacing, rotation
     )
 
     return {
-        rows     = rows,
-        cols     = cols,
-        spacing  = spacing,
+        rows = rows,
+        cols = cols,
+        spacing = spacing,
         rotation = rotation,
-        cells    = cells,
+        anchor = anchor,
+        cells = cells,
     }
 end
 
@@ -63,6 +62,7 @@ end
 --- @param anchorPos table   {x, y, z} — new anchor (cursor) position.
 --- @return table  The updated grid object.
 function Grid.setAnchor(grid, anchorPos)
+    grid.anchor = anchorPos
     grid.cells = Placement.getAllCellPositions(
         anchorPos,
         grid.rows,
@@ -81,28 +81,13 @@ end
 --- @param newCols integer
 --- @return table  New grid object.
 function Grid.resize(grid, newRows, newCols)
-    -- Recalculate anchor as the centre of the current grid, then rebuild.
-    -- For simplicity we keep the current first-cell origin as anchor basis.
-    -- TODO: Optionally preserve the visual centre across resizes.
-    local origin = grid.cells and grid.cells[1] and grid.cells[1].worldPos
-                   or {x = 0, y = 0, z = 0}
-
-    -- Offset origin to new centre.
-    local newCells = Placement.getAllCellPositions(
-        origin,
-        newRows,
-        newCols,
-        grid.spacing,
-        grid.rotation
-    )
-
-    return {
-        rows     = newRows,
-        cols     = newCols,
-        spacing  = grid.spacing,
+    return Grid.generate({
+        rows = newRows,
+        cols = newCols,
+        spacing = grid.spacing,
         rotation = grid.rotation,
-        cells    = newCells,
-    }
+        anchor = grid.anchor,
+    })
 end
 
 --- Return a new grid rotated by `angleDeg` degrees (added to current rotation).
@@ -112,27 +97,13 @@ end
 --- @return table  New grid object.
 function Grid.rotate(grid, angleDeg)
     local newRotation = (grid.rotation + angleDeg) % 360
-
-    -- Derive anchor from the first cell (rough approximation — TODO: track
-    -- the true grid centre explicitly).
-    local origin = grid.cells and grid.cells[1] and grid.cells[1].worldPos
-                   or {x = 0, y = 0, z = 0}
-
-    local newCells = Placement.getAllCellPositions(
-        origin,
-        grid.rows,
-        grid.cols,
-        grid.spacing,
-        newRotation
-    )
-
-    return {
-        rows     = grid.rows,
-        cols     = grid.cols,
-        spacing  = grid.spacing,
+    return Grid.generate({
+        rows = grid.rows,
+        cols = grid.cols,
+        spacing = grid.spacing,
         rotation = newRotation,
-        cells    = newCells,
-    }
+        anchor = grid.anchor,
+    })
 end
 
 return Grid

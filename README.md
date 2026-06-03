@@ -1,6 +1,6 @@
 # WINDROSE Better Planting
 
-> **Status: Early Scaffold / WIP** — Windrose modding integration details are still under investigation. No specific engine hooks have been validated yet. This repository is implementation-ready structurally, but runtime behavior depends on research outcomes described below.
+> **Status: Research + Prototype Skeleton** — Windrose modding integration details are still under investigation. No specific engine hooks have been validated yet. This repository now includes research notes and a prototype-oriented Lua skeleton, but runtime behavior still depends on verified hooks.
 
 A Windrose game mod for **aesthetic planting assistance**, inspired by grid/snap planting helpers like those found in Don't Starve Together. The goal is to make planting crops and trees feel precise, aligned, and satisfying.
 
@@ -45,7 +45,13 @@ Both modes are optional and independently configurable.
 
 ## Current Status / Research Status
 
-This repository is an **early scaffold**. The project structure, design, and configuration schema are in place, but the following are still under investigation:
+This repository is in a **research + prototype skeleton** phase.
+
+The project structure is in place, the likely modding approaches are documented, and the prototype code is organized around this first concrete objective:
+
+> **When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.**
+
+The following are still under investigation:
 
 | Question | Status |
 |---|---|
@@ -56,7 +62,12 @@ This repository is an **early scaffold**. The project structure, design, and con
 | Terrain validity and collision queries | 🔍 Researching |
 | Multiplayer sync requirements | 🔍 Not started |
 
-See [`docs/design.md`](docs/design.md) for a full list of open technical questions.
+See:
+
+- [`docs/design.md`](docs/design.md)
+- [`docs/modding-research.md`](docs/modding-research.md)
+- [`docs/runtime-setup.md`](docs/runtime-setup.md)
+- [`docs/prototype-plan.md`](docs/prototype-plan.md)
 
 Progress will be updated here as research and prototyping advances.
 
@@ -69,11 +80,16 @@ WINDROSE-Better-Planting/
 ├── README.md                   ← This file
 ├── LICENSE
 ├── docs/
-│   └── design.md               ← Full design document
+│   ├── design.md               ← Full design document
+│   ├── modding-research.md     ← Confirmed facts vs assumptions/open questions
+│   ├── runtime-setup.md        ← Runtime notes and verification checklist
+│   └── prototype-plan.md       ← Concrete prototype objective and staged plan
 ├── config/
 │   └── default-config.json     ← Default mod configuration schema
 └── src/
-    ├── main.lua                ← Mod entry point / bootstrapper
+    ├── main.lua                ← Research-phase prototype bootstrapper
+    ├── config.lua              ← Embedded config defaults + helpers
+    ├── log.lua                 ← Minimal prototype logger
     ├── core/
     │   ├── selection.lua       ← Detects currently selected plant/seed
     │   ├── placement.lua       ← Placement math (snap points, offsets)
@@ -81,6 +97,8 @@ WINDROSE-Better-Planting/
     │   ├── validation.lua      ← Per-cell validity checking
     │   ├── preview.lua         ← Ghost grid rendering
     │   └── input.lua           ← Input/hotkey handling
+    ├── runtime/
+    │   └── bridge.lua          ← Stub adapter for future engine hooks
     └── ui/
         └── overlay.lua         ← HUD overlay and settings UI
 ```
@@ -89,18 +107,22 @@ WINDROSE-Better-Planting/
 
 ## Getting Started (Early Development)
 
-> There is no installable release yet. This is a scaffold only.
+> There is no installable release yet. This repository currently contains research notes and a prototype skeleton, not a verified working Windrose hook.
 
 When the mod is ready for testing:
 
-1. Identify the correct mod directory for your Windrose installation:
+1. Verify the correct mod directory for your Windrose installation. Current community-sourced candidates are:
    ```
    Windrose\R5\Content\Paks\~mods\
+   ```
+   and
+   ```
+   Windrose\R5\Builds\WindowsServer\R5\Content\Paks\~mods\
    ```
 2. Copy the packaged mod `.pak` file there, or follow UE4SS instructions if applicable.
 3. Launch the game and look for the Better Planting indicators in the build menu.
 
-Packaging instructions will be added once the runtime approach is confirmed.
+These paths and packaging steps still need verification. See [`docs/runtime-setup.md`](docs/runtime-setup.md) for the current checklist.
 
 ---
 
@@ -112,12 +134,13 @@ Contributions are welcome, especially during this early research phase.
 
 - **Research:** If you have experience with Windrose modding, UE4SS, or Unreal Engine pak mods, open an issue or PR with findings. Any data on build-menu hooks, plant selection detection, or preview overlay support is extremely valuable.
 - **Design feedback:** Open an issue to discuss planned features, scope, or UX ideas.
-- **Code stubs:** The `src/` modules are placeholders. If you can implement a module based on confirmed Windrose APIs, PRs are welcome.
+- **Code stubs:** The `src/` modules are prototype-facing placeholders. If you can replace a stub with confirmed Windrose or UE4SS integration, PRs are welcome.
 - **Testing:** Once early builds exist, playtest reports and screenshots are appreciated.
 
 ### Guidelines
 
 - Do not invent Windrose APIs that have not been confirmed. Use `-- TODO` comments for unknowns.
+- Keep research notes explicit about what is confirmed versus assumed.
 - Keep commit messages descriptive.
 - Open an issue before large changes to align on direction.
 - Follow the existing file and naming structure under `src/`.
