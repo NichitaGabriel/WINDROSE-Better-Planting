@@ -34,7 +34,7 @@ local function vectorToString(worldPos)
 end
 
 function BetterPlanting._logState(reason)
-    if not BetterPlanting._config or BetterPlanting._config.prototype.log_state_transitions == false then
+    if not BetterPlanting._config or not BetterPlanting._config.prototype or BetterPlanting._config.prototype.log_state_transitions == false then
         return
     end
 
@@ -106,9 +106,10 @@ function BetterPlanting.init()
        onShutdown = BetterPlanting.shutdown,
    })
 
-   Log.info(BetterPlanting._config.prototype.startup_signal .. " (" .. BetterPlanting._config.prototype.runtime_shape .. ").")
+   local prototypeConfig = BetterPlanting._config.prototype or {}
+   Log.info((prototypeConfig.startup_signal or "WINDROSE-Better-Planting vertical slice loaded") .. " (" .. (prototypeConfig.runtime_shape or "prototype") .. ").")
    Log.info("Initialised prototype bootstrap.")
-   Log.info("Prototype objective: " .. BetterPlanting._config.prototype.objective)
+   Log.info("Prototype objective: " .. tostring(prototypeConfig.objective))
    Selection.refresh()
    BetterPlanting._logState("startup")
 end

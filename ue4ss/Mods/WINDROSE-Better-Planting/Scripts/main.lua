@@ -23,6 +23,11 @@ end
 
 local scriptDir = dirname(source)
 local modRoot = dirname(scriptDir)
+-- Expected staged layout:
+--   Mods/WINDROSE-Better-Planting/Scripts/main.lua
+-- with sibling src/ and config/ directories under WINDROSE-Better-Planting/.
+-- repoRoot is only a convenience fallback so this bootstrap also works from
+-- the repository checkout before files are staged into a UE4SS install.
 local repoRoot = climb(modRoot, 3)
 local pathEntries = {
     modRoot .. "/src/?.lua",
