@@ -23,6 +23,53 @@ BetterPlanting._currentSnap = nil
 BetterPlanting._currentPreset = nil
 BetterPlanting._config = nil
 BetterPlanting._placementMode = "snap"
+BetterPlanting._lastStateSignature = nil
+
+local function vectorToString(worldPos)
+    if type(worldPos) ~= "table" then
+        return "nil"
+    end
+
+    return string.format("(%.2f, %.2f, %.2f)", worldPos.x or 0, worldPos.y or 0, worldPos.z or 0)
+end
+
+function BetterPlanting._logState(reason)
+    if not BetterPlanting._config or BetterPlanting._config.prototype.log_state_transitions == false then
+        return
+    end
+
+    local snapWorldPos = BetterPlanting._currentSnap and BetterPlanting._currentSnap.worldPos or nil
+    local mockState = RuntimeBridge.getMockState()
+    local snapValid = BetterPlanting._currentSnap and BetterPlanting._currentSnap.valid
+    local snapValidText = snapValid == nil and "nil" or tostring(snapValid)
+    local signature = table.concat({
+        tostring(reason),
+        tostring(BetterPlanting._active),
+        tostring(BetterPlanting._placementMode),
+        tostring(BetterPlanting._currentSelection),
+        snapValidText,
+        vectorToString(snapWorldPos),
+        tostring(mockState.enabled),
+        vectorToString(mockState.cursor),
+    }, "|")
+
+    if signature == BetterPlanting._lastStateSignature then
+        return
+    end
+
+    BetterPlanting._lastStateSignature = signature
+    Log.info(string.format(
+        "Prototype state [%s] active=%s mode=%s selection=%s mock=%s anchor=%s snap=%s valid=%s",
+        tostring(reason),
+        tostring(BetterPlanting._active),
+        tostring(BetterPlanting._placementMode),
+        tostring(BetterPlanting._currentSelection),
+        tostring(mockState.enabled),
+        vectorToString(mockState.cursor),
+        vectorToString(snapWorldPos),
+        snapValidText
+    ))
+end
 
 function BetterPlanting.init()
    BetterPlanting._config = Config.load("config/default-config.json")
@@ -50,18 +97,25 @@ function BetterPlanting.init()
    Input.onRotate(BetterPlanting._onRotate)
    Input.onConfirm(BetterPlanting._onConfirm)
    Input.onCancel(BetterPlanting._onCancel)
+   Input.onDebugToggle(BetterPlanting._onDebugToggle)
+   Input.onAnchorNudge(BetterPlanting._onAnchorNudge)
+   Input.onAnchorReset(BetterPlanting._onAnchorReset)
 
    RuntimeBridge.registerLifecycleHooks({
        onTick = BetterPlanting.tick,
        onShutdown = BetterPlanting.shutdown,
    })
 
+   Log.info(BetterPlanting._config.prototype.startup_signal .. " (" .. BetterPlanting._config.prototype.runtime_shape .. ").")
    Log.info("Initialised prototype bootstrap.")
    Log.info("Prototype objective: " .. BetterPlanting._config.prototype.objective)
+   Selection.refresh()
+   BetterPlanting._logState("startup")
 end
 
 function BetterPlanting._onSelectionChange(plantType)
    BetterPlanting._currentSelection = plantType
+   Log.info("Selection changed to: " .. tostring(plantType))
 
    if not Selection.isPlantable(plantType) then
        BetterPlanting._active = false
@@ -70,6 +124,7 @@ function BetterPlanting._onSelectionChange(plantType)
        Preview.hide()
        Preview.hideSnapPoint()
        Overlay.hide()
+       BetterPlanting._logState("selection-cleared")
        return
    end
 
@@ -94,6 +149,7 @@ end
 function BetterPlanting._onModeToggle()
     BetterPlanting._placementMode = Config.cycleMode(BetterPlanting._config, BetterPlanting._placementMode)
     BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+    BetterPlanting._logState("mode-toggle")
 end
 
 function BetterPlanting._onSpacingAdjust(delta)
@@ -115,6 +171,7 @@ function BetterPlanting._onSpacingAdjust(delta)
     end
 
     BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+    BetterPlanting._logState("spacing-adjust")
 end
 
 function BetterPlanting._onRotate(delta)
@@ -124,6 +181,7 @@ function BetterPlanting._onRotate(delta)
 
     BetterPlanting._currentGrid = Grid.rotate(BetterPlanting._currentGrid, delta or 0)
     BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+    BetterPlanting._logState("rotate")
 end
 
 function BetterPlanting._onConfirm()
@@ -138,21 +196,63 @@ function BetterPlanting._onCancel()
     Preview.hide()
     Preview.hideSnapPoint()
     Overlay.hide()
+    BetterPlanting._logState("cancel")
+end
+
+function BetterPlanting._onDebugToggle()
+    local mockEnabled = RuntimeBridge.toggleMockMode()
+    Selection.refresh()
+
+    if mockEnabled then
+       BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+       BetterPlanting._logState("mock-enabled")
+       return
+    end
+
+    BetterPlanting._active = false
+    BetterPlanting._currentSnap = nil
+    Preview.hide()
+    Preview.hideSnapPoint()
+    Overlay.hide()
+    BetterPlanting._logState("mock-disabled")
+end
+
+function BetterPlanting._onAnchorNudge(delta)
+    local anchorPos = RuntimeBridge.nudgeMockCursor(delta or {x = 0, y = 0, z = 0})
+    if not anchorPos then
+       return
+    end
+
+    BetterPlanting._refreshPrototypeState(anchorPos)
+    BetterPlanting._logState("anchor-nudge")
+end
+
+function BetterPlanting._onAnchorReset()
+    local anchorPos = RuntimeBridge.resetMockCursor()
+    BetterPlanting._refreshPrototypeState(anchorPos)
+    BetterPlanting._logState("anchor-reset")
 end
 
 function BetterPlanting._refreshPrototypeState(anchorPos)
     if not BetterPlanting._active or not BetterPlanting._currentPreset then
-        return
+       return
     end
 
     if not anchorPos then
-        Overlay.updatePrototype({
-            objective = BetterPlanting._config.prototype.objective,
-            mode = BetterPlanting._placementMode,
-            selection = BetterPlanting._currentSelection,
-            status = "Waiting for runtime cursor/placement anchor hook",
-        })
-        return
+       BetterPlanting._currentSnap = nil
+       Preview.hideSnapPoint()
+       Preview.hide()
+       Overlay.updatePrototype({
+           objective = BetterPlanting._config.prototype.objective,
+           mode = BetterPlanting._placementMode,
+           selection = BetterPlanting._currentSelection,
+           status = "Waiting for runtime cursor/placement anchor hook",
+           runtimeShape = BetterPlanting._config.prototype.runtime_shape,
+           mockState = RuntimeBridge.getMockState(),
+           capabilities = RuntimeBridge.describeCapabilities(),
+       })
+       BetterPlanting._logState("waiting-anchor")
+       return
     end
 
     local snapPoint = Placement.snapToGrid(anchorPos, BetterPlanting._currentPreset.spacing)
@@ -181,9 +281,14 @@ function BetterPlanting._refreshPrototypeState(anchorPos)
         objective = BetterPlanting._config.prototype.objective,
         mode = BetterPlanting._placementMode,
         selection = BetterPlanting._currentSelection,
+        status = RuntimeBridge.isMockModeEnabled() and "Mock anchor active for single snap candidate." or "Runtime anchor active for single snap candidate.",
         snapCandidate = BetterPlanting._currentSnap,
         gridSummary = BetterPlanting._currentGrid and Validation.summarise(BetterPlanting._currentGrid.cells) or nil,
+        runtimeShape = BetterPlanting._config.prototype.runtime_shape,
+        mockState = RuntimeBridge.getMockState(),
+        capabilities = RuntimeBridge.describeCapabilities(),
     })
+    BetterPlanting._logState("candidate-updated")
 end
 
 function BetterPlanting.tick()
@@ -214,7 +319,23 @@ function BetterPlanting.getPrototypeState()
         preview = Preview.getState(),
         overlay = Overlay.getState(),
         capabilities = RuntimeBridge.describeCapabilities(),
+        mock = RuntimeBridge.getMockState(),
     }
+end
+
+function BetterPlanting.simulateDebugAction(action)
+    return Input.simulateAction(action)
+end
+
+function BetterPlanting.setMockSelection(selection)
+    RuntimeBridge.setMockSelection(selection)
+    Selection.refresh()
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+end
+
+function BetterPlanting.setMockAnchor(worldPos)
+    RuntimeBridge.setMockCursorWorldPosition(worldPos)
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
 end
 
 -- Intentional for the prototype phase: loading the module immediately boots

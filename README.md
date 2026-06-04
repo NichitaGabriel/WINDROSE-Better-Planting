@@ -1,6 +1,6 @@
 # WINDROSE Better Planting
 
-> **Status: Research + Prototype Skeleton** — Windrose modding integration details are still under investigation. No specific engine hooks have been validated yet. This repository now includes research notes and a prototype-oriented Lua skeleton, but runtime behavior still depends on verified hooks.
+> **Status: Research + UE4SS-Oriented Prototype Vertical Slice** — Windrose modding integration details are still under investigation. No specific Windrose engine hooks have been validated yet. This repository now includes an honest UE4SS-style bootstrap, a mock/manual fallback path, and a runnable single-snap prototype flow.
 
 A Windrose game mod for **aesthetic planting assistance**, inspired by grid/snap planting helpers like those found in Don't Starve Together. The goal is to make planting crops and trees feel precise, aligned, and satisfying.
 
@@ -45,11 +45,19 @@ Both modes are optional and independently configurable.
 
 ## Current Status / Research Status
 
-This repository is in a **research + prototype skeleton** phase.
+This repository is in a **research + prototype vertical slice** phase.
 
-The project structure is in place, the likely modding approaches are documented, and the prototype code is organized around this first concrete objective:
+The project structure is in place, the likely modding approaches are documented, and the prototype code now proves this first concrete objective:
 
 > **When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.**
+
+What this PR now enables:
+
+- a UE4SS-oriented bootstrap entry at `ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua`
+- a startup/debug signal in logs when the prototype loads
+- a mock/manual anchor fallback so the snap flow can run before real Windrose hooks are known
+- one snapped candidate stored in prototype state and surfaced through logs, preview state, and overlay state
+- placeholder keybind descriptors for toggling mock mode and nudging the manual anchor
 
 The following are still under investigation:
 
@@ -107,22 +115,57 @@ WINDROSE-Better-Planting/
 
 ## Getting Started (Early Development)
 
-> There is no installable release yet. This repository currently contains research notes and a prototype skeleton, not a verified working Windrose hook.
+> This is still a prototype, not a verified shipping mod. The current slice is meant to prove loading, debug observability, and one snapped planting candidate without claiming real Windrose placement hooks.
 
-When the mod is ready for testing:
+### What is real vs mocked right now
 
-1. Verify the correct mod directory for your Windrose installation. Current community-sourced candidates are:
-   ```
-   Windrose\R5\Content\Paks\~mods\
-   ```
-   and
-   ```
-   Windrose\R5\Builds\WindowsServer\R5\Content\Paks\~mods\
-   ```
-2. Copy the packaged mod `.pak` file there, or follow UE4SS instructions if applicable.
-3. Launch the game and look for the Better Planting indicators in the build menu.
+- **Real in this repo:** bootstrap flow, pure snap math, prototype state updates, logging, preview/overlay state, and manual mock anchor stepping
+- **Still mocked/unverified:** real Windrose selection detection, real cursor/placement anchor hooks, real preview rendering, real validity queries, and real input registration inside the game runtime
 
-These paths and packaging steps still need verification. See [`docs/runtime-setup.md`](docs/runtime-setup.md) for the current checklist.
+### Beginner manual test goal
+
+Success for this milestone is:
+
+> **The prototype loads and emits a startup signal, and a snapped candidate position can be generated and observed through logs/debug state.**
+
+### UE4SS-oriented local layout
+
+The repo now includes a likely UE4SS entrypoint here:
+
+```text
+ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua
+```
+
+For a manual prototype test, stage the mod so that the final runtime layout looks like this:
+
+```text
+<UE4SS root>/
+└── Mods/
+    └── WINDROSE-Better-Planting/
+        ├── Scripts/
+        │   └── main.lua
+        ├── src/
+        │   └── ...
+        └── config/
+            └── default-config.json
+```
+
+The repository already contains those source folders; the important part is preserving that relative layout when you copy files into a UE4SS install.
+
+### What to look for during the test
+
+1. Start Windrose with UE4SS installed.
+2. Watch the UE4SS/Lua log output for:
+   - `WINDROSE-Better-Planting vertical slice loaded`
+   - `UE4SS bootstrap entry loaded`
+   - a `Prototype state [...]` log line that includes a mock anchor and snap position
+3. If mock mode is active, the prototype should already expose one snap candidate from the configured mock anchor.
+4. If your runtime later supports keybind registration, the placeholder debug actions are intended to:
+   - toggle mock mode
+   - nudge the mock anchor forward/back/left/right
+   - reset the mock anchor
+
+These paths and packaging steps still need verification. See [`docs/runtime-setup.md`](docs/runtime-setup.md) for the current checklist and the exact mock-mode behavior.
 
 ---
 

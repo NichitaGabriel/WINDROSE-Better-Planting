@@ -2,9 +2,11 @@
 
 ## Purpose
 
-This repository is currently in a **research + prototype** phase.
+This repository is currently in a **research + prototype vertical slice** phase.
 
-The Lua files under `/tmp/workspace/NichitaGabriel/WINDROSE-Better-Planting/src` are structured like a likely UE4SS-style runtime mod, but they do **not** claim to already have verified Windrose engine hooks.
+The Lua files under `/tmp/workspace/NichitaGabriel/WINDROSE-Better-Planting/src` are structured like a likely UE4SS-style runtime mod, and the repo now includes a UE4SS-oriented bootstrap entry under `/tmp/workspace/NichitaGabriel/WINDROSE-Better-Planting/ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua`.
+
+This still does **not** claim that Windrose-specific engine hooks are verified.
 
 ---
 
@@ -43,6 +45,8 @@ If the final mod uses PAKs, these are likely candidate install paths. If the fin
 
 Current prototype-facing modules:
 
+- `ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua`
+  - UE4SS-oriented entrypoint that resolves module paths and loads the prototype
 - `src/main.lua`
   - bootstraps the prototype flow
 - `src/config.lua`
@@ -76,10 +80,78 @@ The bridge intentionally supports **mock state** so the Lua code can be sanity-c
 
 - mock selection
 - mock cursor world position
-- mock validity responses
+- optimistic mock validity responses
 - lifecycle tick dispatch
+- debug toggle for mock mode
+- manual anchor stepping for a single snapped candidate
 
 This is only for local verification of module flow and math.
+
+---
+
+## Beginner-friendly manual test flow
+
+The current milestone is intentionally narrow:
+
+> **Load the prototype, generate one snapped planting candidate, and observe it through logs/debug state.**
+
+### Expected staged layout
+
+When copying the prototype into a UE4SS install, preserve this layout:
+
+```text
+<UE4SS root>/
+└── Mods/
+    └── WINDROSE-Better-Planting/
+        ├── Scripts/
+        │   └── main.lua
+        ├── src/
+        │   ├── main.lua
+        │   ├── runtime/bridge.lua
+        │   ├── core/...
+        │   └── ui/overlay.lua
+        └── config/
+            └── default-config.json
+```
+
+### What happens on load
+
+If the vertical slice loads, it should:
+
+1. emit a startup signal:
+   - `WINDROSE-Better-Planting vertical slice loaded`
+   - `UE4SS bootstrap entry loaded`
+2. enable mock prototype mode by default
+3. force a planting-compatible mock selection (`debug_crop_seed`)
+4. seed a manual anchor from config
+5. compute one snapped candidate from that anchor and expose it through:
+   - logs (`Prototype state [...]`)
+   - preview state (`getPrototypeState().preview.snapPoint`)
+   - overlay state (`getPrototypeState().overlay.snapCandidate`)
+
+### Debug actions in this slice
+
+The prototype now registers keybind-oriented descriptors for these actions:
+
+- `toggle_debug`
+- `mock_anchor_forward`
+- `mock_anchor_backward`
+- `mock_anchor_left`
+- `mock_anchor_right`
+- `reset_mock_anchor`
+
+These descriptors are safe even before real input registration is verified. If a runtime cannot bind them yet, the loaded module still exposes `simulateDebugAction(action)` for local/manual smoke testing in a Lua-capable environment.
+
+### Success criterion
+
+Treat the milestone as successful when:
+
+- the prototype emits its startup signal
+- mock mode is clearly reported as active
+- one snapped candidate is present in the prototype state
+- moving or resetting the mock anchor changes the reported snapped candidate
+
+Do **not** treat this milestone as proof of real in-game placement integration.
 
 ---
 
@@ -93,4 +165,3 @@ Do **not** mark Windrose integration as working until all of the following are v
 - [ ] A visible preview indicator can be rendered
 - [ ] Placement validity can be queried or delegated to the game
 - [ ] Multiplayer behavior is understood well enough for public release notes
-
