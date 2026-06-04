@@ -45,9 +45,22 @@ Config._defaults = {
     mode = "both",
     prototype = {
         objective = "When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.",
+        runtime_shape = "UE4SS-oriented Lua vertical slice",
+        startup_signal = "WINDROSE-Better-Planting vertical slice loaded",
         default_active_mode = "snap",
         allow_mock_bridge = true,
         min_spacing = 0.5,
+        log_state_transitions = true,
+        mock = {
+            enabled = true,
+            selection = "debug_crop_seed",
+            anchor = {
+                x = 2.25,
+                y = 0.0,
+                z = 4.75,
+            },
+            anchor_step = 1.0,
+        },
     },
     debug = {
         enabled = true,
@@ -104,6 +117,11 @@ Config._defaults = {
     hotkeys = {
         toggle_mod = "F8",
         toggle_mode = "F9",
+        mock_anchor_forward = "Up",
+        mock_anchor_backward = "Down",
+        mock_anchor_left = "Left",
+        mock_anchor_right = "Right",
+        reset_mock_anchor = "Home",
         increase_rows = "NumpadPlus",
         decrease_rows = "NumpadMinus",
         increase_cols = "RightBracket",

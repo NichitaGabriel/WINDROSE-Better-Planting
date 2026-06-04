@@ -11,6 +11,7 @@
 
 local Input = {}
 local DEFAULT_ROTATION_STEP = 45
+local DEFAULT_ANCHOR_STEP = 1.0
 
 Input._config = nil
 Input._bridge = nil
@@ -21,7 +22,16 @@ Input._spacingCallbacks = {}
 Input._rotateCallbacks = {}
 Input._confirmCallbacks = {}
 Input._cancelCallbacks = {}
+Input._debugToggleCallbacks = {}
+Input._anchorNudgeCallbacks = {}
+Input._anchorResetCallbacks = {}
 Input._registered = false
+
+local function getPrototypeAnchorStep(config)
+    local prototypeConfig = config and config.prototype or nil
+    local mockConfig = prototypeConfig and prototypeConfig.mock or nil
+    return (mockConfig and mockConfig.anchor_step) or DEFAULT_ANCHOR_STEP
+end
 
 -- ---------------------------------------------------------------------------
 -- Init / teardown
@@ -45,7 +55,13 @@ function Input.register()
 
     if Input._bridge and Input._bridge.registerInputBindings then
         Input._bridge.registerInputBindings({
+            {action = "toggle_debug", key = keys.toggle_mod},
             {action = "toggle_mode", key = keys.toggle_mode},
+            {action = "mock_anchor_forward", key = keys.mock_anchor_forward},
+            {action = "mock_anchor_backward", key = keys.mock_anchor_backward},
+            {action = "mock_anchor_left", key = keys.mock_anchor_left},
+            {action = "mock_anchor_right", key = keys.mock_anchor_right},
+            {action = "reset_mock_anchor", key = keys.reset_mock_anchor},
             {action = "increase_rows", key = keys.increase_rows},
             {action = "decrease_rows", key = keys.decrease_rows},
             {action = "increase_cols", key = keys.increase_cols},
@@ -101,6 +117,18 @@ end
 
 function Input.onCancel(callback)
     table.insert(Input._cancelCallbacks, callback)
+end
+
+function Input.onDebugToggle(callback)
+    table.insert(Input._debugToggleCallbacks, callback)
+end
+
+function Input.onAnchorNudge(callback)
+    table.insert(Input._anchorNudgeCallbacks, callback)
+end
+
+function Input.onAnchorReset(callback)
+    table.insert(Input._anchorResetCallbacks, callback)
 end
 
 -- ---------------------------------------------------------------------------
@@ -173,9 +201,55 @@ function Input._fireCancel()
     end
 end
 
+function Input._fireDebugToggle()
+    for _, cb in ipairs(Input._debugToggleCallbacks) do
+        local ok, err = pcall(cb)
+        if not ok and Input._log and Input._log.warn then
+            Input._log.warn("DebugToggle callback error: " .. tostring(err))
+        end
+    end
+end
+
+function Input._fireAnchorNudge(delta)
+    for _, cb in ipairs(Input._anchorNudgeCallbacks) do
+        local ok, err = pcall(cb, delta)
+        if not ok and Input._log and Input._log.warn then
+            Input._log.warn("AnchorNudge callback error: " .. tostring(err))
+        end
+    end
+end
+
+function Input._fireAnchorReset()
+    for _, cb in ipairs(Input._anchorResetCallbacks) do
+        local ok, err = pcall(cb)
+        if not ok and Input._log and Input._log.warn then
+            Input._log.warn("AnchorReset callback error: " .. tostring(err))
+        end
+    end
+end
+
 function Input.simulateAction(action)
+    local prototypeStep = getPrototypeAnchorStep(Input._config)
+    if action == "toggle_debug" then
+        return Input._fireDebugToggle()
+    end
     if action == "toggle_mode" then
         return Input._fireModeToggle()
+    end
+    if action == "mock_anchor_forward" then
+        return Input._fireAnchorNudge({x = 0, y = 0, z = prototypeStep})
+    end
+    if action == "mock_anchor_backward" then
+        return Input._fireAnchorNudge({x = 0, y = 0, z = -prototypeStep})
+    end
+    if action == "mock_anchor_left" then
+        return Input._fireAnchorNudge({x = -prototypeStep, y = 0, z = 0})
+    end
+    if action == "mock_anchor_right" then
+        return Input._fireAnchorNudge({x = prototypeStep, y = 0, z = 0})
+    end
+    if action == "reset_mock_anchor" then
+        return Input._fireAnchorReset()
     end
     if action == "increase_rows" then
         return Input._fireGridResize({rows = 1, cols = 0})
