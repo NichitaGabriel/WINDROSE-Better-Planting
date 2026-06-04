@@ -29,6 +29,9 @@ local modRoot = dirname(scriptDir)
 -- with sibling src/ and config/ directories under WINDROSE-Better-Planting/.
 -- repoRoot is only a convenience fallback so this bootstrap also works from
 -- the repository checkout before files are staged into a UE4SS install.
+-- The fallback climbs exactly 3 levels from:
+--   WINDROSE-Better-Planting/Scripts -> WINDROSE-Better-Planting -> Mods -> ue4ss
+-- to reach the repository root in this checkout layout.
 local repoRoot = climb(modRoot, 3)
 local pathEntries = {
     modRoot .. "/src/?.lua",

@@ -18,7 +18,7 @@
       "enabled": true,
       "selection": "debug_crop_seed",
       "anchor": {
-        "_comment": "Default test coordinates chosen so one right-step crosses a snap boundary with spacing 2.0.",
+        "_comment": "Default test coordinates chosen so one right-step crosses the current default snap spacing boundary.",
         "x": 2.25,
         "y": 0.0,
         "z": 4.75

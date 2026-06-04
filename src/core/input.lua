@@ -11,6 +11,7 @@
 
 local Input = {}
 local DEFAULT_ROTATION_STEP = 45
+local DEFAULT_ANCHOR_STEP = 1.0
 
 Input._config = nil
 Input._bridge = nil
@@ -29,7 +30,7 @@ Input._registered = false
 local function getPrototypeAnchorStep(config)
     local prototypeConfig = config and config.prototype or nil
     local mockConfig = prototypeConfig and prototypeConfig.mock or nil
-    return (mockConfig and mockConfig.anchor_step) or 1.0
+    return (mockConfig and mockConfig.anchor_step) or DEFAULT_ANCHOR_STEP
 end
 
 -- ---------------------------------------------------------------------------

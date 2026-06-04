@@ -40,6 +40,10 @@ local function safeLog(method, message)
     end
 end
 
+local function shouldEnableMockMode(prototypeConfig, mockConfig)
+    return prototypeConfig.allow_mock_bridge == true and (mockConfig.enabled == nil or mockConfig.enabled == true)
+end
+
 function RuntimeBridge.init(config, log)
     RuntimeBridge._config = config
     RuntimeBridge._log = log
@@ -47,7 +51,7 @@ function RuntimeBridge.init(config, log)
     RuntimeBridge._bindings = {}
     local prototypeConfig = (config and config.prototype) or {}
     local mockConfig = prototypeConfig.mock or {}
-    local mockEnabled = prototypeConfig.allow_mock_bridge == true and (mockConfig.enabled == nil or mockConfig.enabled == true)
+    local mockEnabled = shouldEnableMockMode(prototypeConfig, mockConfig)
     local defaultCursor = cloneVector(mockConfig.anchor) or {x = 0, y = 0, z = 0}
 
     RuntimeBridge._mock = {
@@ -60,7 +64,7 @@ function RuntimeBridge.init(config, log)
         validity = nil,
     }
 
-    safeLog("info", "Runtime bridge ready. Verified WINDROSE hooks remain unknown; mock fallback is " .. (mockEnabled and "enabled" or "disabled") .. ".")
+    safeLog("info", "Runtime bridge ready. WINDROSE hooks remain unverified; mock fallback is " .. (mockEnabled and "enabled" or "disabled") .. ".")
     if mockEnabled then
         safeLog("info", "Mock planting selection seeded as '" .. tostring(RuntimeBridge._mock.selection) .. "' at anchor " .. vectorToString(RuntimeBridge._mock.cursor) .. ".")
     end
