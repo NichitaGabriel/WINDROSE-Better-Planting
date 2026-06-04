@@ -4,7 +4,7 @@
 
 This repository is currently in a **research + prototype vertical slice** phase.
 
-The Lua files under `<repo_root>/src` are structured like a likely UE4SS-style runtime mod, and the repo now includes a UE4SS-oriented bootstrap entry under `<repo_root>/ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua`.
+The Lua files under `<repo_root>/src` are structured as a UE4SS-style runtime mod, and the repo now includes a UE4SS-oriented bootstrap entry under `<repo_root>/ue4ss/Mods/WINDROSE-Better-Planting/Scripts/main.lua`.
 
 This still does **not** claim that Windrose-specific engine hooks are verified.
 

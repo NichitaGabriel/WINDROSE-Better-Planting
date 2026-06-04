@@ -26,6 +26,12 @@ Input._anchorNudgeCallbacks = {}
 Input._anchorResetCallbacks = {}
 Input._registered = false
 
+local function getPrototypeAnchorStep(config)
+    local prototypeConfig = config and config.prototype or nil
+    local mockConfig = prototypeConfig and prototypeConfig.mock or nil
+    return (mockConfig and mockConfig.anchor_step) or 1.0
+end
+
 -- ---------------------------------------------------------------------------
 -- Init / teardown
 -- ---------------------------------------------------------------------------
@@ -222,7 +228,7 @@ function Input._fireAnchorReset()
 end
 
 function Input.simulateAction(action)
-    local prototypeStep = (((Input._config or {}).prototype or {}).mock or {}).anchor_step or 1.0
+    local prototypeStep = getPrototypeAnchorStep(Input._config)
     if action == "toggle_debug" then
         return Input._fireDebugToggle()
     end

@@ -5,7 +5,8 @@
 -- It only resolves Lua module paths and then loads src/main.lua.
 
 local function dirname(path)
-    return path:match("^(.*)[/\\][^/\\]+$") or "."
+    local normalised = path:gsub("[/\\]+$", "")
+    return normalised:match("^(.*)[/\\][^/\\]+$") or "."
 end
 
 local function climb(path, levels)

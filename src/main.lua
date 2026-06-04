@@ -33,8 +33,13 @@ local function vectorToString(worldPos)
     return string.format("(%.2f, %.2f, %.2f)", worldPos.x or 0, worldPos.y or 0, worldPos.z or 0)
 end
 
+local function getPrototypeConfig()
+    return (BetterPlanting._config and BetterPlanting._config.prototype) or {}
+end
+
 function BetterPlanting._logState(reason)
-    if not BetterPlanting._config or not BetterPlanting._config.prototype or BetterPlanting._config.prototype.log_state_transitions == false then
+    local prototypeConfig = getPrototypeConfig()
+    if not BetterPlanting._config or prototypeConfig.log_state_transitions == false then
         return
     end
 
@@ -106,7 +111,7 @@ function BetterPlanting.init()
        onShutdown = BetterPlanting.shutdown,
    })
 
-   local prototypeConfig = BetterPlanting._config.prototype or {}
+   local prototypeConfig = getPrototypeConfig()
    Log.info((prototypeConfig.startup_signal or "WINDROSE-Better-Planting vertical slice loaded") .. " (" .. (prototypeConfig.runtime_shape or "prototype") .. ").")
    Log.info("Initialised prototype bootstrap.")
    Log.info("Prototype objective: " .. tostring(prototypeConfig.objective))
@@ -127,17 +132,17 @@ function BetterPlanting._onSelectionChange(plantType)
        Overlay.hide()
        BetterPlanting._logState("selection-cleared")
        return
-   end
+    end
 
-   BetterPlanting._active = true
-   BetterPlanting._currentPreset = Config.getPresetForPlant(BetterPlanting._config, plantType)
-   BetterPlanting._currentGrid = Grid.generate(BetterPlanting._currentPreset)
-   Overlay.show()
-   BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+    BetterPlanting._active = true
+    BetterPlanting._currentPreset = Config.getPresetForPlant(BetterPlanting._config, plantType)
+    BetterPlanting._currentGrid = Grid.generate(BetterPlanting._currentPreset)
+    Overlay.show()
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
 end
 
 function BetterPlanting._onGridResize(delta)
-   if not BetterPlanting._active or not BetterPlanting._currentGrid then
+    if not BetterPlanting._active or not BetterPlanting._currentGrid then
        return
     end
 
@@ -205,9 +210,9 @@ function BetterPlanting._onDebugToggle()
     Selection.refresh()
 
     if mockEnabled then
-       BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
-       BetterPlanting._logState("mock-enabled")
-       return
+        BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+        BetterPlanting._logState("mock-enabled")
+        return
     end
 
     BetterPlanting._active = false
@@ -221,7 +226,7 @@ end
 function BetterPlanting._onAnchorNudge(delta)
     local anchorPos = RuntimeBridge.nudgeMockCursor(delta or {x = 0, y = 0, z = 0})
     if not anchorPos then
-       return
+        return
     end
 
     BetterPlanting._refreshPrototypeState(anchorPos)
@@ -240,15 +245,16 @@ function BetterPlanting._refreshPrototypeState(anchorPos)
     end
 
     if not anchorPos then
+       local prototypeConfig = getPrototypeConfig()
        BetterPlanting._currentSnap = nil
        Preview.hideSnapPoint()
        Preview.hide()
        Overlay.updatePrototype({
-           objective = BetterPlanting._config.prototype.objective,
+           objective = prototypeConfig.objective,
            mode = BetterPlanting._placementMode,
            selection = BetterPlanting._currentSelection,
            status = "Waiting for runtime cursor/placement anchor hook",
-           runtimeShape = BetterPlanting._config.prototype.runtime_shape,
+           runtimeShape = prototypeConfig.runtime_shape,
            mockState = RuntimeBridge.getMockState(),
            capabilities = RuntimeBridge.describeCapabilities(),
        })
@@ -278,14 +284,15 @@ function BetterPlanting._refreshPrototypeState(anchorPos)
     end
 
     Overlay.update(BetterPlanting._currentGrid.rows, BetterPlanting._currentGrid.cols, BetterPlanting._currentPreset.spacing)
+    local prototypeConfig = getPrototypeConfig()
     Overlay.updatePrototype({
-        objective = BetterPlanting._config.prototype.objective,
+        objective = prototypeConfig.objective,
         mode = BetterPlanting._placementMode,
         selection = BetterPlanting._currentSelection,
         status = RuntimeBridge.isMockModeEnabled() and "Mock anchor active for single snap candidate." or "Runtime anchor active for single snap candidate.",
         snapCandidate = BetterPlanting._currentSnap,
         gridSummary = BetterPlanting._currentGrid and Validation.summarise(BetterPlanting._currentGrid.cells) or nil,
-        runtimeShape = BetterPlanting._config.prototype.runtime_shape,
+        runtimeShape = prototypeConfig.runtime_shape,
         mockState = RuntimeBridge.getMockState(),
         capabilities = RuntimeBridge.describeCapabilities(),
     })
