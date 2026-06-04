@@ -4,6 +4,21 @@
   "enabled": true,
   "mode": "both",
 
+  "prototype": {
+    "_comment": "Research/prototype settings. These document the current goal and default runtime behavior for the skeleton code.",
+    "objective": "When a planting-compatible item is selected, compute and expose one snapped candidate position based on configurable spacing.",
+    "default_active_mode": "snap",
+    "allow_mock_bridge": true,
+    "min_spacing": 0.5
+  },
+
+  "debug": {
+    "_comment": "Prototype logging settings.",
+    "enabled": true,
+    "log_level": "debug",
+    "log_preview_cells": false
+  },
+
   "snap": {
     "_comment": "Option A — snap-assisted single placement settings.",
     "enabled": true,

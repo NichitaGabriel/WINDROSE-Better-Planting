@@ -12,6 +12,8 @@
 local Validation = {}
 
 Validation._config = nil
+Validation._bridge = nil
+Validation._log = nil
 
 -- ---------------------------------------------------------------------------
 -- Init
@@ -19,9 +21,12 @@ Validation._config = nil
 
 --- Initialise the validation module.
 --- @param config table  The loaded mod configuration.
-function Validation.init(config)
+--- @param bridge table  Runtime adapter.
+--- @param log table     Logger.
+function Validation.init(config, bridge, log)
     Validation._config = config
-    print("[Validation] Initialised.")
+    Validation._bridge = bridge
+    Validation._log = log
 end
 
 -- ---------------------------------------------------------------------------
@@ -39,25 +44,13 @@ end
 --- @param plantType string  Name/type of the plant to be placed.
 --- @return boolean
 function Validation.isValid(worldPos, plantType)
-    -- TODO: Call the Windrose terrain surface query.
-    -- e.g.
-    -- if not Game.isTerrainPlantable(worldPos) then
-    --     return false
-    -- end
+    if Validation._bridge and Validation._bridge.queryPlacementValidity then
+        local valid = Validation._bridge.queryPlacementValidity(worldPos, plantType)
+        if type(valid) == "boolean" then
+            return valid
+        end
+    end
 
-    -- TODO: Call the Windrose overlap / spacing check.
-    -- e.g.
-    -- if Game.hasTooCloseObjects(worldPos, plantType) then
-    --     return false
-    -- end
-
-    -- TODO: Check if the position is within the player's placement reach.
-    -- e.g.
-    -- if not Game.isWithinPlacementRange(worldPos) then
-    --     return false
-    -- end
-
-    -- Placeholder: assume all positions are valid until engine APIs are known.
     return true
 end
 
@@ -93,6 +86,13 @@ function Validation.summarise(cells)
     end
 
     return {total = total, valid = valid, invalid = invalid}
+end
+
+function Validation.getCandidate(worldPos, plantType)
+    return {
+        worldPos = worldPos,
+        valid = Validation.isValid(worldPos, plantType),
+    }
 end
 
 return Validation

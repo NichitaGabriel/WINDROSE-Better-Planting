@@ -1,152 +1,225 @@
 -- WINDROSE Better Planting
 -- src/main.lua
 --
--- Mod entry point and bootstrapper.
--- Loads configuration, initializes all core modules, and registers
--- with the Windrose game lifecycle hooks.
---
--- TODO: Replace all engine hook calls once the Windrose modding runtime
---       stack has been confirmed (pak / UE4SS / other scripting layer).
+-- Prototype bootstrapper.
+-- This file wires together the current research-phase modules without
+-- pretending that Windrose runtime hooks have already been verified.
 
-local Config    = require("config")
+local Config = require("config")
+local Log = require("log")
+local RuntimeBridge = require("runtime.bridge")
 local Selection = require("core.selection")
 local Placement = require("core.placement")
-local Grid      = require("core.grid")
+local Grid = require("core.grid")
 local Validation = require("core.validation")
-local Preview   = require("core.preview")
-local Input     = require("core.input")
-local Overlay   = require("ui.overlay")
-
--- ---------------------------------------------------------------------------
--- Module state
--- ---------------------------------------------------------------------------
+local Preview = require("core.preview")
+local Input = require("core.input")
+local Overlay = require("ui.overlay")
 
 local BetterPlanting = {}
-BetterPlanting._active     = false
+BetterPlanting._active = false
 BetterPlanting._currentGrid = nil
-BetterPlanting._config     = nil
-
--- ---------------------------------------------------------------------------
--- Initialisation
--- ---------------------------------------------------------------------------
+BetterPlanting._currentSnap = nil
+BetterPlanting._currentPreset = nil
+BetterPlanting._config = nil
+BetterPlanting._placementMode = "snap"
 
 function BetterPlanting.init()
-    -- Load and validate configuration from default-config.json.
-    -- TODO: Determine the correct config file path for the Windrose mod runtime.
-    BetterPlanting._config = Config.load("config/default-config.json")
+   BetterPlanting._config = Config.load("config/default-config.json")
+   Log.init(BetterPlanting._config.debug, "BetterPlanting")
+   RuntimeBridge.init(BetterPlanting._config, Log)
+   BetterPlanting._placementMode = Config.getInitialMode(BetterPlanting._config)
 
-    if not BetterPlanting._config.enabled then
-        print("[BetterPlanting] Mod disabled in config. Skipping init.")
-        return
-    end
+   if BetterPlanting._config.enabled == false then
+       Log.warn("Mod disabled in config. Skipping init.")
+       return
+   end
 
-    -- Initialise core modules.
-    Selection.init(BetterPlanting._config)
-    Placement.init(BetterPlanting._config)
-    Grid.init(BetterPlanting._config)
-    Validation.init(BetterPlanting._config)
-    Preview.init(BetterPlanting._config)
-    Input.init(BetterPlanting._config)
-    Overlay.init(BetterPlanting._config)
+   Selection.init(BetterPlanting._config, RuntimeBridge, Log)
+   Placement.init(BetterPlanting._config)
+   Grid.init(BetterPlanting._config)
+   Validation.init(BetterPlanting._config, RuntimeBridge, Log)
+   Preview.init(BetterPlanting._config, RuntimeBridge, Log)
+   Input.init(BetterPlanting._config, RuntimeBridge, Log)
+   Overlay.init(BetterPlanting._config, Log)
 
-    -- Register callbacks.
-    Selection.onSelectionChange(BetterPlanting._onSelectionChange)
-    Input.onGridResize(BetterPlanting._onGridResize)
-    Input.onConfirm(BetterPlanting._onConfirm)
+   Selection.onSelectionChange(BetterPlanting._onSelectionChange)
+   Input.onGridResize(BetterPlanting._onGridResize)
+   Input.onModeToggle(BetterPlanting._onModeToggle)
+   Input.onSpacingAdjust(BetterPlanting._onSpacingAdjust)
+   Input.onRotate(BetterPlanting._onRotate)
+   Input.onConfirm(BetterPlanting._onConfirm)
+   Input.onCancel(BetterPlanting._onCancel)
 
-    -- TODO: Register mod with game lifecycle (load / unload hooks).
-    -- e.g. Game.onUnload(BetterPlanting.shutdown)
+   RuntimeBridge.registerLifecycleHooks({
+       onTick = BetterPlanting.tick,
+       onShutdown = BetterPlanting.shutdown,
+   })
 
-    print("[BetterPlanting] Initialised. Mode: " .. tostring(BetterPlanting._config.mode))
+   Log.info("Initialised prototype bootstrap.")
+   Log.info("Prototype objective: " .. BetterPlanting._config.prototype.objective)
 end
 
--- ---------------------------------------------------------------------------
--- Lifecycle callbacks
--- ---------------------------------------------------------------------------
-
---- Called when the player selects or deselects a plantable item in the
---- build menu.
----
---- @param plantType string|nil  Name of the selected plant, or nil if
----                              nothing plantable is selected.
 function BetterPlanting._onSelectionChange(plantType)
-    if plantType == nil then
-        -- Nothing selected — clear preview and overlay.
-        Preview.hide()
-        Overlay.hide()
-        BetterPlanting._active = false
-        return
-    end
+   BetterPlanting._currentSelection = plantType
 
-    BetterPlanting._active = true
+   if not Selection.isPlantable(plantType) then
+       BetterPlanting._active = false
+       BetterPlanting._currentGrid = nil
+       BetterPlanting._currentSnap = nil
+       Preview.hide()
+       Preview.hideSnapPoint()
+       Overlay.hide()
+       return
+   end
 
-    -- Apply the appropriate preset for this plant type.
-    local preset = Config.getPresetForPlant(BetterPlanting._config, plantType)
-    BetterPlanting._currentGrid = Grid.generate(preset)
-
-    -- Validate and render.
-    Validation.checkAll(BetterPlanting._currentGrid.cells, plantType)
-    Preview.show(BetterPlanting._currentGrid.cells)
-    Overlay.show()
-    Overlay.update(
-        BetterPlanting._currentGrid.rows,
-        BetterPlanting._currentGrid.cols,
-        preset.spacing
-    )
+   BetterPlanting._active = true
+   BetterPlanting._currentPreset = Config.getPresetForPlant(BetterPlanting._config, plantType)
+   BetterPlanting._currentGrid = Grid.generate(BetterPlanting._currentPreset)
+   Overlay.show()
+   BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
 end
 
---- Called when the player uses hotkeys to resize the grid.
----
---- @param delta table  {rows = int, cols = int} — signed change values.
 function BetterPlanting._onGridResize(delta)
-    if not BetterPlanting._active or not BetterPlanting._currentGrid then
-        return
+   if not BetterPlanting._active or not BetterPlanting._currentGrid then
+       return
     end
 
-    local cfg = BetterPlanting._config.grid
     local newRows = math.max(1, BetterPlanting._currentGrid.rows + (delta.rows or 0))
     local newCols = math.max(1, BetterPlanting._currentGrid.cols + (delta.cols or 0))
-
     BetterPlanting._currentGrid = Grid.resize(BetterPlanting._currentGrid, newRows, newCols)
-
-    -- Re-validate and redraw.
-    local plantType = Selection.getSelected()
-    Validation.checkAll(BetterPlanting._currentGrid.cells, plantType)
-    Preview.update(BetterPlanting._currentGrid.cells)
-    Overlay.update(newRows, newCols, cfg.spacing)
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
 end
 
---- Called when the player confirms placement (mouse click / hotkey).
-function BetterPlanting._onConfirm()
-    if not BetterPlanting._active or not BetterPlanting._currentGrid then
+function BetterPlanting._onModeToggle()
+    BetterPlanting._placementMode = Config.cycleMode(BetterPlanting._config, BetterPlanting._placementMode)
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+end
+
+function BetterPlanting._onSpacingAdjust(delta)
+    if not BetterPlanting._currentPreset then
         return
     end
 
-    -- TODO: Place plants at all valid cells using the Windrose placement API.
-    -- e.g. for _, cell in ipairs(BetterPlanting._currentGrid.cells) do
-    --     if cell.valid then
-    --         Game.placeObject(Selection.getSelected(), cell.worldPos)
-    --     end
-    -- end
+    local minSpacing = BetterPlanting._config.prototype.min_spacing or 0.5
+    local spacing = math.max(minSpacing, (BetterPlanting._currentPreset.spacing or 2.0) + delta)
+    BetterPlanting._currentPreset.spacing = spacing
 
-    print("[BetterPlanting] Placement confirmed. (TODO: call engine API)")
+    if BetterPlanting._currentGrid then
+        BetterPlanting._currentGrid.spacing = spacing
+        BetterPlanting._currentGrid = Grid.resize(
+            BetterPlanting._currentGrid,
+            BetterPlanting._currentGrid.rows,
+            BetterPlanting._currentGrid.cols
+        )
+    end
+
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
 end
 
--- ---------------------------------------------------------------------------
--- Shutdown
--- ---------------------------------------------------------------------------
+function BetterPlanting._onRotate(delta)
+    if not BetterPlanting._currentGrid then
+        return
+    end
+
+    BetterPlanting._currentGrid = Grid.rotate(BetterPlanting._currentGrid, delta or 0)
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+end
+
+function BetterPlanting._onConfirm()
+    if not BetterPlanting._active then
+        return
+    end
+
+    Log.info("Placement confirm requested. TODO: route through verified Windrose placement API.")
+end
+
+function BetterPlanting._onCancel()
+    Preview.hide()
+    Preview.hideSnapPoint()
+    Overlay.hide()
+end
+
+function BetterPlanting._refreshPrototypeState(anchorPos)
+    if not BetterPlanting._active or not BetterPlanting._currentPreset then
+        return
+    end
+
+    if not anchorPos then
+        Overlay.updatePrototype({
+            objective = BetterPlanting._config.prototype.objective,
+            mode = BetterPlanting._placementMode,
+            selection = BetterPlanting._currentSelection,
+            status = "Waiting for runtime cursor/placement anchor hook",
+        })
+        return
+    end
+
+    local snapPoint = Placement.snapToGrid(anchorPos, BetterPlanting._currentPreset.spacing)
+    BetterPlanting._currentSnap = Validation.getCandidate(snapPoint, BetterPlanting._currentSelection)
+
+    if BetterPlanting._currentSnap and Config.modeAllows(BetterPlanting._config, BetterPlanting._placementMode, "snap") then
+        Preview.showSnapPoint(BetterPlanting._currentSnap.worldPos)
+    else
+        Preview.hideSnapPoint()
+    end
+
+    if BetterPlanting._currentGrid then
+        BetterPlanting._currentGrid.spacing = BetterPlanting._currentPreset.spacing
+        BetterPlanting._currentGrid = Grid.setAnchor(BetterPlanting._currentGrid, snapPoint)
+        Validation.checkAll(BetterPlanting._currentGrid.cells, BetterPlanting._currentSelection)
+
+        if Config.modeAllows(BetterPlanting._config, BetterPlanting._placementMode, "grid") then
+            Preview.showGrid(BetterPlanting._currentGrid.cells)
+        else
+            Preview.hide()
+        end
+    end
+
+    Overlay.update(BetterPlanting._currentGrid.rows, BetterPlanting._currentGrid.cols, BetterPlanting._currentPreset.spacing)
+    Overlay.updatePrototype({
+        objective = BetterPlanting._config.prototype.objective,
+        mode = BetterPlanting._placementMode,
+        selection = BetterPlanting._currentSelection,
+        snapCandidate = BetterPlanting._currentSnap,
+        gridSummary = BetterPlanting._currentGrid and Validation.summarise(BetterPlanting._currentGrid.cells) or nil,
+    })
+end
+
+function BetterPlanting.tick()
+    Selection.refresh()
+
+    if not BetterPlanting._active then
+        return
+    end
+
+    BetterPlanting._refreshPrototypeState(RuntimeBridge.getCursorWorldPosition())
+end
 
 function BetterPlanting.shutdown()
     Preview.hide()
+    Preview.hideSnapPoint()
     Overlay.hide()
     Input.unregister()
-    print("[BetterPlanting] Shutdown complete.")
+    Log.info("Shutdown complete.")
 end
 
--- ---------------------------------------------------------------------------
--- Entry point
--- ---------------------------------------------------------------------------
+function BetterPlanting.getPrototypeState()
+    return {
+        active = BetterPlanting._active,
+        selection = BetterPlanting._currentSelection,
+        mode = BetterPlanting._placementMode,
+        snapCandidate = BetterPlanting._currentSnap,
+        grid = BetterPlanting._currentGrid,
+        preview = Preview.getState(),
+        overlay = Overlay.getState(),
+        capabilities = RuntimeBridge.describeCapabilities(),
+    }
+end
 
+-- Intentional for the prototype phase: loading the module immediately boots
+-- the stubbed runtime flow so it can be exercised by a UE4SS-style loader or
+-- local mock validation without extra wiring.
 BetterPlanting.init()
 
 return BetterPlanting

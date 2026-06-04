@@ -12,10 +12,11 @@
 
 local Selection = {}
 
--- Internal state.
-Selection._currentSelection  = nil
-Selection._changeCallbacks   = {}
-Selection._config            = nil
+Selection._currentSelection = nil
+Selection._changeCallbacks = {}
+Selection._config = nil
+Selection._bridge = nil
+Selection._log = nil
 
 -- ---------------------------------------------------------------------------
 -- Init / teardown
@@ -23,16 +24,19 @@ Selection._config            = nil
 
 --- Initialise the selection module.
 --- @param config table  The loaded mod configuration.
-function Selection.init(config)
+--- @param bridge table  Runtime adapter.
+--- @param log table     Logger.
+function Selection.init(config, bridge, log)
     Selection._config = config
+    Selection._bridge = bridge
+    Selection._log = log
     Selection._currentSelection = nil
+end
 
-    -- TODO: Register with the Windrose build-menu open/close events so we
-    --       can start and stop polling or listening for selection changes.
-    -- e.g. Game.onBuildMenuOpen(Selection._startTracking)
-    --      Game.onBuildMenuClose(Selection._stopTracking)
-
-    print("[Selection] Initialised.")
+function Selection._safeLog(method, message)
+    if Selection._log and Selection._log[method] then
+        Selection._log[method](message)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -44,8 +48,6 @@ end
 ---
 --- @return string|nil
 function Selection.getSelected()
-    -- TODO: Read the current selection from the Windrose build-menu API.
-    -- e.g. return Game.getBuildMenuSelection()
     return Selection._currentSelection
 end
 
@@ -53,12 +55,12 @@ end
 --- something the mod should respond to).
 ---
 --- @return boolean
-function Selection.isPlantable()
-    local sel = Selection.getSelected()
-    if sel == nil then return false end
+function Selection.isPlantable(selection)
+    local sel = selection or Selection.getSelected()
+    if sel == nil then
+        return false
+    end
 
-    -- TODO: Check against the Windrose plantable-item registry.
-    -- For now, assume everything non-nil is plantable.
     return true
 end
 
@@ -68,6 +70,16 @@ end
 --- @param callback function  fn(plantType: string|nil)
 function Selection.onSelectionChange(callback)
     table.insert(Selection._changeCallbacks, callback)
+end
+
+--- Poll the runtime bridge for the latest selection and notify listeners if it changed.
+function Selection.refresh()
+    if not Selection._bridge or not Selection._bridge.getCurrentSelection then
+        return Selection._currentSelection
+    end
+
+    Selection._notify(Selection._bridge.getCurrentSelection())
+    return Selection._currentSelection
 end
 
 -- ---------------------------------------------------------------------------
@@ -88,27 +100,9 @@ function Selection._notify(newSelection)
     for _, cb in ipairs(Selection._changeCallbacks) do
         local ok, err = pcall(cb, newSelection)
         if not ok then
-            print("[Selection] Callback error: " .. tostring(err))
+            Selection._safeLog("warn", "Selection callback error: " .. tostring(err))
         end
     end
 end
-
--- TODO: Implement polling or event-based selection tracking once the
---       Windrose build-menu API is confirmed.
--- e.g.
--- function Selection._startTracking()
---     Selection._pollHandle = Game.registerTick(function()
---         local sel = Game.getBuildMenuSelection()
---         Selection._notify(sel)
---     end)
--- end
---
--- function Selection._stopTracking()
---     if Selection._pollHandle then
---         Game.unregisterTick(Selection._pollHandle)
---         Selection._pollHandle = nil
---     end
---     Selection._notify(nil)
--- end
 
 return Selection

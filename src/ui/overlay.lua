@@ -12,10 +12,12 @@
 
 local Overlay = {}
 
-Overlay._config    = nil
-Overlay._visible   = false
-Overlay._hudHandle = nil   -- Engine handle for the HUD widget.
+Overlay._config = nil
+Overlay._log = nil
+Overlay._visible = false
+Overlay._hudHandle = nil
 Overlay._settingsHandle = nil
+Overlay._lastState = nil
 
 -- ---------------------------------------------------------------------------
 -- Init
@@ -23,10 +25,17 @@ Overlay._settingsHandle = nil
 
 --- Initialise the overlay module.
 --- @param config table  The loaded mod configuration.
-function Overlay.init(config)
-    Overlay._config  = config
+--- @param log table     Logger.
+function Overlay.init(config, log)
+    Overlay._config = config
+    Overlay._log = log
     Overlay._visible = false
-    print("[Overlay] Initialised.")
+end
+
+function Overlay._safeLog(method, message)
+    if Overlay._log and Overlay._log[method] then
+        Overlay._log[method](message)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -37,32 +46,13 @@ end
 function Overlay.show()
     if Overlay._visible then return end
 
-    local cfg = Overlay._config.preview
-
-    -- TODO: Create and display the HUD widget using the Windrose UI API.
-    -- e.g.
-    -- Overlay._hudHandle = Game.createWidget("BetterPlantingHUD", {
-    --     position = cfg.hud_position,
-    --     opacity  = cfg.hud_opacity,
-    --     fontSize = cfg.hud_font_size,
-    -- })
-
     Overlay._visible = true
-    print("[Overlay] HUD shown. (TODO: engine API)")
 end
 
 --- Hide and destroy the HUD overlay widget.
 function Overlay.hide()
     if not Overlay._visible then return end
-
-    -- TODO: Destroy the HUD widget.
-    -- e.g. if Overlay._hudHandle then
-    --          Game.destroyWidget(Overlay._hudHandle)
-    --          Overlay._hudHandle = nil
-    --      end
-
     Overlay._visible = false
-    print("[Overlay] HUD hidden. (TODO: engine API)")
 end
 
 --- Update the displayed grid information in the HUD.
@@ -72,15 +62,11 @@ end
 --- @param spacing number   Current grid spacing.
 function Overlay.update(rows, cols, spacing)
     if not Overlay._visible then return end
-
-    -- TODO: Update the HUD widget text fields.
-    -- e.g.
-    -- Game.setWidgetText(Overlay._hudHandle, "rows",    tostring(rows))
-    -- Game.setWidgetText(Overlay._hudHandle, "cols",    tostring(cols))
-    -- Game.setWidgetText(Overlay._hudHandle, "spacing", string.format("%.1f", spacing))
-
-    print(string.format("[Overlay] HUD updated — %dx%d, spacing %.1f (TODO: engine API)",
-        rows, cols, spacing))
+    Overlay._lastState = {
+        rows = rows,
+        cols = cols,
+        spacing = spacing,
+    }
 end
 
 -- ---------------------------------------------------------------------------
@@ -89,20 +75,26 @@ end
 
 --- Open the settings panel (if available).
 function Overlay.showSettings()
-    -- TODO: Create and display the settings panel widget.
-    -- e.g.
-    -- Overlay._settingsHandle = Game.createWidget("BetterPlantingSettings", {})
-
-    print("[Overlay] Settings panel opened. (TODO: engine API)")
+    Overlay._safeLog("info", "Settings panel requested. TODO: bind to verified UI runtime.")
 end
 
 --- Close the settings panel.
 function Overlay.hideSettings()
     if Overlay._settingsHandle then
-        -- TODO: Destroy the settings panel widget.
-        -- e.g. Game.destroyWidget(Overlay._settingsHandle)
         Overlay._settingsHandle = nil
     end
+end
+
+function Overlay.updatePrototype(state)
+    if not Overlay._visible then
+        return
+    end
+
+    Overlay._lastState = state
+end
+
+function Overlay.getState()
+    return Overlay._lastState
 end
 
 return Overlay
